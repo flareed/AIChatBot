@@ -1,0 +1,28 @@
+{
+    "model": "mistral:7b",
+    "created_at": "2025-06-20T08:32:31.5059082Z",
+    "message": {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+            {
+                "function": {
+                    "name": "calculate",
+                    "arguments": {
+                        "bank": "A Chau Bank",
+                        "money": 10000,
+                        "month": 1
+                    }
+                }
+            }
+        ]
+    },
+    "done_reason": "stop",
+    "done": true,
+    "total_duration": 478348700,
+    "load_duration": 5000000,
+    "prompt_eval_count": 146,
+    "prompt_eval_duration": 4000200,
+    "eval_count": 34,
+    "eval_duration": 468999700
+}
