@@ -113,12 +113,12 @@ async function loadChatHistory() {
 				minute: 'numeric'
 			});
 
-			const preview = conv.preview.length > 30
+			const preview = conv.preview?.length > 30
 				? conv.preview.substring(0, 30) + '...'
-				: conv.preview;
+				: conv.preview || 'New conversation';
 
 			const historyItem = $(`
-				<li class="history_item" data-id="${conv.id}">
+				<li class="history_item ${conv.id === currentConversationId ? 'active' : ''}" data-id="${conv.id}">
 					<div class="preview">${preview}</div>
 					<div class="timestamp">${date}</div>
 				</li>
@@ -133,9 +133,9 @@ async function loadChatHistory() {
 }
 
 /**
- * Load a specific conversation
+ * Load a specific conversation's messages
  */
-async function loadConversation(conversationId) {
+async function loadConversationMessages(conversationId) {
 	try {
 		console.log('Loading conversation:', conversationId);
 		const response = await fetch(`/api/chat/${conversationId}`);
@@ -152,6 +152,9 @@ async function loadConversation(conversationId) {
 		if (!data || !data.messages || !Array.isArray(data.messages)) {
 			throw new Error('Invalid conversation data received');
 		}
+
+		// Update current conversation ID
+		currentConversationId = conversationId;
 
 		// Clear current messages
 		$('.messages').empty();
@@ -192,6 +195,7 @@ async function startNewChat() {
 		}
 
 		const data = await response.json();
+		currentConversationId = data.conversationId;
 
 		// Clear messages
 		$('.messages').empty();
@@ -207,7 +211,7 @@ async function startNewChat() {
 
 		// Update active state
 		$('.history_item').removeClass('active');
-		$(`.history_item[data-id="${data.conversationId}"]`).addClass('active');
+		$(`.history_item[data-id="${currentConversationId}"]`).addClass('active');
 
 	} catch (error) {
 		console.error('Error starting new chat:', error);
@@ -220,7 +224,7 @@ $('#new_chat_button').on('click', startNewChat);
 
 $(document).on('click', '.history_item', function () {
 	const conversationId = $(this).data('id');
-	loadConversation(conversationId);
+	loadConversationMessages(conversationId);
 });
 
 $('#send_button').on('click', async function (e) {
@@ -234,7 +238,10 @@ $('#send_button').on('click', async function (e) {
 		const response = await fetch('/api/chat', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ message: userMessage })
+			body: JSON.stringify({
+				message: userMessage,
+				conversationId: currentConversationId
+			})
 		});
 
 		if (!response.ok) {
@@ -244,6 +251,11 @@ $('#send_button').on('click', async function (e) {
 
 		const data = await response.json();
 		showBotMessage(data.reply);
+
+		// Update current conversation ID if it changed
+		if (data.conversationId) {
+			currentConversationId = data.conversationId;
+		}
 
 		// Refresh chat history
 		await loadChatHistory();

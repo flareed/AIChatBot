@@ -92,6 +92,23 @@ async function startNewConversation() {
     return conversationId;
 }
 
+async function switchToConversation(conversationId) {
+    try {
+        const conversation = await require('./chat_history_db').loadConversation(conversationId);
+        if (conversation && conversation.messages) {
+            currentConversation = {
+                id: conversationId,
+                messages: conversation.messages
+            };
+            return conversation;
+        }
+        return null;
+    } catch (err) {
+        console.error('Error loading conversation:', err);
+        return null;
+    }
+}
+
 async function getCurrentConversation() {
     return currentConversation;
 }
@@ -208,9 +225,6 @@ module.exports = {
     sendChat_ToolResponse,
     toolHandlers,
     startNewConversation,
-    loadConversation,
     getCurrentConversation,
-    listConversations,
-    deleteConversation,
     getLastBotMessage
 };

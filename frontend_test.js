@@ -2,15 +2,17 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 require(path.join(__dirname, "load_env.js"));
+
+// Import database functions directly
+const { loadConversation, listConversations, deleteConversation } = require('./chat_history_db');
+
+// Import chatbot functions
 const {
     sendChat_Tool,
     sendChat_ToolResponse,
     toolHandlers,
     startNewConversation,
-    loadConversation,
     getCurrentConversation,
-    listConversations,
-    deleteConversation
 } = require('./chatbot_core');
 
 const app = express();
@@ -57,21 +59,26 @@ app.get('/api/chat/:conversationId', async (req, res) => {
         console.log('Loading conversation:', req.params.conversationId);
         const conversation = await loadConversation(req.params.conversationId);
 
-        if (!conversation || !conversation.messages) {
-            console.log('Conversation not found or invalid');
+        if (!conversation) {
+            console.log('Conversation not found:', req.params.conversationId);
             return res.status(404).json({ error: 'Conversation not found' });
         }
 
-        console.log('Loaded conversation:', JSON.stringify(conversation, null, 2));
+        if (!conversation.messages || !Array.isArray(conversation.messages)) {
+            console.log('Invalid conversation data:', conversation);
+            return res.status(500).json({ error: 'Invalid conversation data' });
+        }
+
+        console.log('Loaded conversation:', conversation.id, 'with', conversation.messages.length, 'messages');
 
         // Ensure the response has the correct structure
         const response = {
-            id: conversation.id || req.params.conversationId,
-            messages: Array.isArray(conversation.messages) ? conversation.messages.map(msg => ({
+            id: conversation.id,
+            messages: conversation.messages.map(msg => ({
                 role: msg.role || 'system',
                 content: msg.content || '',
                 ...(msg.tool_calls ? { tool_calls: msg.tool_calls } : {})
-            })) : []
+            }))
         };
 
         res.json(response);
@@ -101,28 +108,36 @@ app.delete('/api/chat/:conversationId', async (req, res) => {
 
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
-    const { message } = req.body;
-    console.log('Received chat message:', message);
+    const { message, conversationId } = req.body;
+    console.log('Received chat message:', message, 'for conversation:', conversationId);
 
     try {
-        // Get current conversation or start a new one
-        let currentConversation = await getCurrentConversation();
-        if (!currentConversation) {
-            console.log('No active conversation, starting new one...');
-            const conversationId = await startNewConversation();
-            currentConversation = { id: conversationId, messages: [] };
+        // Load the specified conversation or start a new one
+        if (conversationId) {
+            const conversation = await loadConversation(conversationId);
+            if (!conversation) {
+                console.log('Conversation not found, starting new one...');
+                const newConversationId = await startNewConversation();
+                return res.status(404).json({
+                    error: 'Conversation not found, started new one',
+                    conversationId: newConversationId
+                });
+            }
+        } else {
+            console.log('No conversation ID provided, starting new one...');
+            const newConversationId = await startNewConversation();
+            conversationId = newConversationId;
         }
-        console.log('Using conversation:', currentConversation.id);
 
-        // Add user message to conversation
         const toolCall = await sendChat_Tool(message);
 
         if (!toolCall) {
             const lastMsg = require('./chatbot_core').getLastBotMessage();
+            const currentConv = await getCurrentConversation();
             console.log('No tool call, returning last message:', lastMsg);
             return res.json({
                 reply: lastMsg,
-                conversationId: currentConversation.id
+                conversationId: currentConv.id
             });
         }
 
@@ -134,17 +149,19 @@ app.post('/api/chat', async (req, res) => {
             const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
             const resultText = toolHandlers[functionName](parsedArgs);
             const reply = await sendChat_ToolResponse(resultText, functionName);
+            const currentConv = await getCurrentConversation();
             console.log('Tool call handled, reply:', reply);
             return res.json({
                 reply,
-                conversationId: currentConversation.id
+                conversationId: currentConv.id
             });
         } else {
             console.log('No handler found for tool:', functionName);
             const reply = await sendChat_ToolResponse(`No such tool`, functionName);
+            const currentConv = await getCurrentConversation();
             return res.json({
                 reply,
-                conversationId: currentConversation.id
+                conversationId: currentConv.id
             });
         }
     } catch (err) {

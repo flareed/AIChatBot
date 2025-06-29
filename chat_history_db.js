@@ -77,37 +77,52 @@ async function saveConversation(conversationId, messages) {
                 function (err) {
                     if (err) {
                         console.error('Error saving conversation:', err);
-                    } else {
-                        console.log('Saved conversation to conversations table');
+                        db.run('ROLLBACK');
+                        reject(err);
+                        return;
                     }
+                    console.log('Saved conversation to conversations table');
                 }
             );
 
             // Delete existing messages for this conversation
-            db.run('DELETE FROM messages WHERE conversation_id = ?', [conversationId]);
+            db.run('DELETE FROM messages WHERE conversation_id = ?', [conversationId], function (err) {
+                if (err) {
+                    console.error('Error deleting existing messages:', err);
+                    db.run('ROLLBACK');
+                    reject(err);
+                    return;
+                }
+            });
 
-            // Insert new messages
+            // Insert new messages - let SQLite handle the IDs
             const stmt = db.prepare(
                 'INSERT INTO messages (conversation_id, role, content, timestamp, tool_calls) VALUES (?, ?, ?, ?, ?)'
             );
 
-            messages.forEach((msg) => {
+            // Insert messages in order
+            for (let i = 0; i < messages.length; i++) {
+                const msg = messages[i];
                 const toolCallsJson = msg.tool_calls ? JSON.stringify(msg.tool_calls) : null;
                 stmt.run(
                     [conversationId, msg.role, msg.content, timestamp, toolCallsJson],
                     function (err) {
                         if (err) {
                             console.error('Error saving message:', err);
+                            db.run('ROLLBACK');
+                            reject(err);
+                            return;
                         }
                     }
                 );
-            });
+            }
 
             stmt.finalize();
 
             db.run('COMMIT', (err) => {
                 if (err) {
                     console.error('Error committing transaction:', err);
+                    db.run('ROLLBACK');
                     reject(err);
                 } else {
                     console.log('Successfully saved conversation and messages');
