@@ -42,16 +42,16 @@ function renderMessageToScreen(args) {
 
 /* Sends a message when the 'Enter' key is pressed.
  */
-$(document).ready(function() {
-    $('#msg_input').keydown(function(e) {
-        // Check for 'Enter' key
-        if (e.key === 'Enter') {
-            // Prevent default behaviour of enter key
-            e.preventDefault();
+$(document).ready(function () {
+	$('#msg_input').keydown(function (e) {
+		// Check for 'Enter' key
+		if (e.key === 'Enter') {
+			// Prevent default behaviour of enter key
+			e.preventDefault();
 			// Trigger send button click event
-            $('#send_button').click();
-        }
-    });
+			$('#send_button').click();
+		}
+	});
 });
 
 /**
@@ -76,29 +76,187 @@ function showBotMessage(message, datetime) {
 	});
 }
 
+let currentConversationId = null;
+
 /**
- * Get input from user and show it on screen on button click.
+ * Shows an error message in the chat
  */
-$('#send_button').on('click', function (e) {
+function showErrorMessage(error) {
+	renderMessageToScreen({
+		text: `Error: ${error}`,
+		time: getCurrentTimestamp(),
+		message_side: 'left',
+	});
+}
+
+/**
+ * Load chat history
+ */
+async function loadChatHistory() {
+	try {
+		const response = await fetch('/api/chat/history');
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || 'Failed to load chat history');
+		}
+		const conversations = await response.json();
+
+		// Clear existing history
+		const historyList = $('#chat_history');
+		historyList.empty();
+
+		conversations.forEach(conv => {
+			const date = new Date(conv.timestamp).toLocaleString('en-IN', {
+				month: 'short',
+				day: 'numeric',
+				hour: 'numeric',
+				minute: 'numeric'
+			});
+
+			const preview = conv.preview.length > 30
+				? conv.preview.substring(0, 30) + '...'
+				: conv.preview;
+
+			const historyItem = $(`
+				<li class="history_item" data-id="${conv.id}">
+					<div class="preview">${preview}</div>
+					<div class="timestamp">${date}</div>
+				</li>
+			`);
+
+			historyList.append(historyItem);
+		});
+	} catch (error) {
+		console.error('Error loading chat history:', error);
+		showErrorMessage(error.message);
+	}
+}
+
+/**
+ * Load a specific conversation
+ */
+async function loadConversation(conversationId) {
+	try {
+		console.log('Loading conversation:', conversationId);
+		const response = await fetch(`/api/chat/${conversationId}`);
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || 'Failed to load conversation');
+		}
+
+		const data = await response.json();
+		console.log('Received conversation data:', data);
+
+		// Check if we have a valid response with messages
+		if (!data || !data.messages || !Array.isArray(data.messages)) {
+			throw new Error('Invalid conversation data received');
+		}
+
+		// Clear current messages
+		$('.messages').empty();
+
+		// Display messages (skip system messages)
+		data.messages.forEach(msg => {
+			if (!msg.role || !msg.content) return; // Skip invalid messages
+
+			if (msg.role === 'user') {
+				showUserMessage(msg.content);
+			} else if (msg.role === 'assistant' && msg.content) {
+				showBotMessage(msg.content);
+			}
+		});
+
+		// Update active state in history
+		$('.history_item').removeClass('active');
+		$(`.history_item[data-id="${conversationId}"]`).addClass('active');
+
+	} catch (error) {
+		console.error('Error loading conversation:', error);
+		showErrorMessage(error.message);
+	}
+}
+
+/**
+ * Start a new chat
+ */
+async function startNewChat() {
+	try {
+		const response = await fetch('/api/chat/new', {
+			method: 'POST'
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || 'Failed to start new chat');
+		}
+
+		const data = await response.json();
+
+		// Clear messages
+		$('.messages').empty();
+
+		// Show welcome message
+		showBotMessage('Hello there! Type in a message.');
+
+		// Clear input
+		$('#msg_input').val('');
+
+		// Update history
+		await loadChatHistory();
+
+		// Update active state
+		$('.history_item').removeClass('active');
+		$(`.history_item[data-id="${data.conversationId}"]`).addClass('active');
+
+	} catch (error) {
+		console.error('Error starting new chat:', error);
+		showErrorMessage(error.message);
+	}
+}
+
+// Event handlers
+$('#new_chat_button').on('click', startNewChat);
+
+$(document).on('click', '.history_item', function () {
+	const conversationId = $(this).data('id');
+	loadConversation(conversationId);
+});
+
+$('#send_button').on('click', async function (e) {
 	const userMessage = $('#msg_input').val();
 	if (!userMessage.trim()) return;
 
 	showUserMessage(userMessage);
 	$('#msg_input').val('');
 
-	fetch('/api/chat', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ message: userMessage })
-	})
-	.then(res => res.json())
-	.then(data => {
+	try {
+		const response = await fetch('/api/chat', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ message: userMessage })
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error || 'Failed to send message');
+		}
+
+		const data = await response.json();
 		showBotMessage(data.reply);
-	})
-	.catch(err => {
-		showBotMessage("Error: Could not connect to server.");
-		console.error(err);
-	});
+
+		// Refresh chat history
+		await loadChatHistory();
+	} catch (error) {
+		console.error('Error sending message:', error);
+		showErrorMessage(error.message);
+	}
+});
+
+// Load chat history and start new chat when page loads
+$(window).on('load', async function () {
+	await loadChatHistory();
+	await startNewChat();
 });
 
 /**

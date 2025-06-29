@@ -1,14 +1,9 @@
 const path = require('path');
 require(path.join(__dirname, "load_env.js"));
+const { generateConversationId, saveConversation, loadConversation, listConversations, deleteConversation } = require('./chat_history_db');
 
-let buffers = [
-  {
-    role: "system",
-    content: "You are a helpful assistant. Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool."
-  }
-];
-
-let lastBotMessage = "";
+let currentConversation = null;
+let lastBotMessage = '';
 
 const tools_list = [
     {
@@ -84,91 +79,138 @@ const toolHandlers = {
     }
 };
 
-async function sendChat_Tool(text) {
-    const ollama_url = `http://${process.env.HOST}:${process.env.PORT}`;
-    const model = process.env.MODEL;
-    buffers.push({ role: "user", content: text });
-
-    const response = await fetch(`${ollama_url}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            model,
-            messages: buffers,
-            tools: tools_list,
-            stream: false,
-        })
-    });
-
-    const data = await response.json();
-    const message = data.message;
-
-    if (message.tool_calls) {
-        buffers.push({ role: message.role, content: "", tool_calls: message.tool_calls });
-        return message.tool_calls[0];
-    }
-
-    buffers.push({ role: message.role, content: message.content });
-    lastBotMessage = message.content;
-    return null;
+async function startNewConversation() {
+    const conversationId = generateConversationId();
+    currentConversation = {
+        id: conversationId,
+        messages: [{
+            role: 'system',
+            content: 'You are a helpful assistant. Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool.'
+        }]
+    };
+    await saveConversation(conversationId, currentConversation.messages);
+    return conversationId;
 }
 
-/* Must provide context of the assisant tool_calls and reply the function result 
-    Role: user/assistant/tool
-        assistant: tool_calls context
-        tool: function result
-*/
-async function sendChat_ToolResponse(text, function_name) {
-    const ollama_url = `http://${process.env.HOST}:${process.env.PORT}`;
-    const model = process.env.MODEL;
-    buffers.push({ role: "tool", name: function_name, content: text });
-
-    /* Fetch */
-    let response = {};
-    try {
-        response = await fetch(`${ollama_url}/api/chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: model,
-                messages: buffers,
-                tools: tools_list,
-                stream: false
-            })
-        });
-    }
-    catch (err) {
-        console.log(`Network error: ${err.message}`)
-        return;
-    }
-
-    /* Error handling */
-    if (!response.ok) {
-        console.error("HTTP error:", response.status, response.statusText);
-        return;
-    }
-
-    const data = await response.json();
-    if (!data.message) {
-        console.log("Unexpected response format from Ollama");
-        return;
-    }
-    const message = data.message;
-
-    /* Print content */
-    // console.log(JSON.stringify(data, null, 4));
-    buffers.push({ role: message.role, content: message.content })
-    console.log(`Response: ${message.content}`);
-    return message.content;
+async function getCurrentConversation() {
+    return currentConversation;
 }
 
 function getLastBotMessage() {
     return lastBotMessage;
 }
 
+async function sendChat_Tool(message) {
+    if (!currentConversation) {
+        await startNewConversation();
+    }
+
+    // Add user message to conversation
+    currentConversation.messages.push({
+        role: 'user',
+        content: message
+    });
+
+    // Save conversation after adding user message
+    await saveConversation(currentConversation.id, currentConversation.messages);
+
+    const ollama_url = `http://${process.env.HOST}:${process.env.PORT}`;
+    const model = process.env.MODEL;
+
+    // Make API call to Ollama
+    const response = await fetch(`${ollama_url}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            model,
+            messages: currentConversation.messages,
+            tools: tools_list,
+            stream: false,
+        })
+    });
+
+    if (!response.ok) {
+        console.error("HTTP error:", response.status, response.statusText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    const botMessage = responseData.message;
+
+    if (botMessage.tool_calls) {
+        currentConversation.messages.push({
+            role: botMessage.role,
+            content: "",
+            tool_calls: botMessage.tool_calls
+        });
+        await saveConversation(currentConversation.id, currentConversation.messages);
+        return botMessage.tool_calls[0];
+    }
+
+    currentConversation.messages.push({
+        role: botMessage.role,
+        content: botMessage.content
+    });
+    lastBotMessage = botMessage.content;
+    await saveConversation(currentConversation.id, currentConversation.messages);
+    return null;
+}
+
+async function sendChat_ToolResponse(response, toolName) {
+    if (!currentConversation) {
+        throw new Error('No active conversation');
+    }
+
+    // Add tool response to conversation
+    currentConversation.messages.push({
+        role: 'tool',
+        name: toolName,
+        content: response
+    });
+
+    const ollama_url = `http://${process.env.HOST}:${process.env.PORT}`;
+    const model = process.env.MODEL;
+
+    // Make API call to Ollama with tool response
+    const ollama_response = await fetch(`${ollama_url}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            model,
+            messages: currentConversation.messages,
+            tools: tools_list,
+            stream: false
+        })
+    });
+
+    if (!ollama_response.ok) {
+        throw new Error(`HTTP error! status: ${ollama_response.status}`);
+    }
+
+    const responseData = await ollama_response.json();
+    const botMessage = responseData.message;
+
+    // Add assistant response to conversation
+    currentConversation.messages.push({
+        role: botMessage.role,
+        content: botMessage.content
+    });
+    lastBotMessage = botMessage.content;
+
+    // Save conversation after adding all messages
+    await saveConversation(currentConversation.id, currentConversation.messages);
+
+    return botMessage.content;
+}
+
 module.exports = {
     sendChat_Tool,
     sendChat_ToolResponse,
     toolHandlers,
+    startNewConversation,
+    loadConversation,
+    getCurrentConversation,
+    listConversations,
+    deleteConversation,
     getLastBotMessage
 };

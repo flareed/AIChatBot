@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -23,13 +24,25 @@
 
 <body>
 
-	<div class="container">
+	<div class="container-fluid">
 
 		<div class="row padded_row">
 
-			<!-- right side content -->
-			<div class="col-md-7">
+			<!-- Chat History Sidebar -->
+			<div class="col-md-3">
+				<div class="chat_window history_sidebar">
+					<div class="top_menu">
+						<div class="title">Chat History</div>
+					</div>
+					<div class="history_list">
+						<div class="new_chat_btn app_button_1" id="new_chat_button">New Chat</div>
+						<ul id="chat_history"></ul>
+					</div>
+				</div>
+			</div>
 
+			<!-- Main Chat Area -->
+			<div class="col-md-6">
 				<div class="chat_window">
 
 					<div class="top_menu">
@@ -49,8 +62,8 @@
 
 			</div>
 
-			<!-- left side content -->
-			<div class="col-md-5">
+			<!-- Help Section -->
+			<div class="col-md-3">
 				<div class="chat_window">
 
 					<div class="top_menu">
@@ -65,13 +78,16 @@
 							<div class="panel-heading">
 								<h4 class="panel-title">
 									<a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion"
-										href="#collapse1">Lorem ipsum</a>
+										href="#collapse1">Chat Commands</a>
 								</h4>
 							</div>
 							<div id="collapse1" class="panel-collapse collapse in">
 								<div class="panel-body">
-									Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt
-									mollit anim id est laborum
+									<ul class="help_list">
+										<li>Click "New Chat" to start a fresh conversation</li>
+										<li>Click on any chat in history to load it</li>
+										<li>Your chats are automatically saved</li>
+									</ul>
 								</div>
 							</div>
 						</div>
