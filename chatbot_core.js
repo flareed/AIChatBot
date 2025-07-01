@@ -1,13 +1,17 @@
 const path = require('path');
 require(path.join(__dirname, "load_env.js"));
 
-let buffers = [
-  {
-    role: "system",
-    content: "You are a helpful assistant. Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool."
-  }
-];
+/* */
+const ollama_url = `http://${process.env.OLLAMA_HOST}:${process.env.OLLAMA_PORT}`;
+const model = process.env.MODEL;
 
+/* */
+let buffers = [
+    {
+        role: "user",
+        content: "Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool."
+    }
+];
 let lastBotMessage = "";
 
 const tools_list = [
@@ -56,8 +60,6 @@ const tools_list = [
     }
 ];
 
-// ------------------------ TOOL HANDLERS ------------------------
-
 const toolHandlers = {
     add_numbers: (args) => {
         const result = args.a + args.b;
@@ -84,21 +86,144 @@ const toolHandlers = {
     }
 };
 
+// ------------------------ TOOL HANDLERS ------------------------
+function createResponse(message) {
+    return { message: message };
+}
+
+function createErrorResponse(message) {
+    return { isError: true, message: message };
+}
+
 async function sendChat_Tool(text) {
-    const ollama_url = `http://${process.env.HOST}:${process.env.PORT}`;
+    const ollama_url = `http://${process.env.OLLAMA_HOST}:${process.env.OLLAMA_PORT}`;
     const model = process.env.MODEL;
     buffers.push({ role: "user", content: text });
 
-    const response = await fetch(`${ollama_url}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            model,
-            messages: buffers,
-            tools: tools_list,
-            stream: false,
-        })
-    });
+    /* Fetch */
+    let response = {};
+    try {
+        response = await fetch(`${ollama_url}/api/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: model,
+                messages: buffers,
+                tools: tools_list,
+                stream: false,
+            })
+        });
+    }
+    catch (err) {
+        buffers.pop();
+        console.log(`Network error: ${err.message}`)
+        return createErrorResponse(err.message);
+    }
+
+    /* Error handling */
+    if (!response.ok) {
+        buffers.pop();
+        return createErrorResponse(`HTTP error: ${response.status}, ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data.message) {
+        console.log("Unexpected response format from Ollama");
+        return;
+    }
+    const message = data.message;
+
+    if (!message.tool_calls) {
+        console.log("No tool call to do this");
+        return;
+    }
+
+    /* Print content */
+    console.log(JSON.stringify(data, null, 4));
+    const tool_calls = message.tool_calls;
+    // buffers.push({ role: message.role, content: "", tool_calls: JSON.stringify(tool_calls, null, 2) })
+    buffers.push({ role: message.role, content: "", tool_calls: tool_calls })
+    return tool_calls[0];
+}
+
+async function sendChat_Tool(text) {
+    const ollama_url = `http://${process.env.OLLAMA_HOST}:${process.env.OLLAMA_PORT}`;
+    const model = process.env.MODEL;
+    buffers.push({ role: "user", content: text });
+
+    /* Fetch */
+    let response = {};
+    try {
+        response = await fetch(`${ollama_url}/api/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: model,
+                messages: buffers,
+                tools: tools_list,
+                stream: false,
+            })
+        });
+    }
+    catch (err) {
+        console.log(`Network error: ${err.message}`)
+        return;
+    }
+
+    /* Error handling */
+    if (!response.ok) {
+        return createErrorResponse(`HTTP error: ${response.status}, ${response.statusText}`);
+        return;
+    }
+
+    const data = await response.json();
+    if (!data.message) {
+        console.log("Unexpected response format from Ollama");
+        return;
+    }
+    const message = data.message;
+
+    if (!message.tool_calls) {
+        console.log("No tool call to do this");
+        return;
+    }
+
+    /* Print content */
+    console.log(JSON.stringify(data, null, 4));
+    const tool_calls = message.tool_calls;
+    // buffers.push({ role: message.role, content: "", tool_calls: JSON.stringify(tool_calls, null, 2) })
+    buffers.push({ role: message.role, content: "", tool_calls: tool_calls })
+    return tool_calls[0];
+}
+
+async function sendChat_Tool(text) {
+    buffers.push({ role: "user", content: text });
+
+    let response = {};
+    try {
+        response = await fetch(`${ollama_url}/api/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: model,
+                messages: buffers,
+                tools: tools_list,
+                stream: false,
+            })
+        });
+    }
+    catch (err) {
+        console.log(`Network error: ${err.message}`)
+        buffers.pop();
+        return;
+    }
+
+    /* Error handling */
+    if (!response.ok) {
+        return createErrorResponse(`HTTP error: ${response.status}, ${response.statusText}`);
+        buffers.pop();
+        return;
+    }
 
     const data = await response.json();
     const message = data.message;
@@ -119,8 +244,6 @@ async function sendChat_Tool(text) {
         tool: function result
 */
 async function sendChat_ToolResponse(text, function_name) {
-    const ollama_url = `http://${process.env.HOST}:${process.env.PORT}`;
-    const model = process.env.MODEL;
     buffers.push({ role: "tool", name: function_name, content: text });
 
     /* Fetch */
@@ -139,12 +262,14 @@ async function sendChat_ToolResponse(text, function_name) {
     }
     catch (err) {
         console.log(`Network error: ${err.message}`)
+        buffers.pop();
         return;
     }
 
     /* Error handling */
     if (!response.ok) {
-        console.error("HTTP error:", response.status, response.statusText);
+        return createErrorResponse(`HTTP error: ${response.status}, ${response.statusText}`);
+        buffers.pop();
         return;
     }
 
