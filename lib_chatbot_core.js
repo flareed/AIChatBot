@@ -1,5 +1,6 @@
 const path = require('path');
 require(path.join(__dirname, "lib_load_env.js"));
+const ChatHistory = require('./lib_history');
 
 /* */
 const ollama_url = `http://${process.env.OLLAMA_HOST}:${process.env.OLLAMA_PORT}`;
@@ -7,14 +8,34 @@ const model = process.env.MODEL;
 
 const ERR_MODEL_UNKNOWN_RESPONSE = "Something is wrong with the model, please try again";
 
+/* System prompt - hướng dẫn cơ bản cho AI */
+const SYSTEM_PROMPT = {
+    role: "user",
+    content: "Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool."
+};
+
+// Giới hạn số lượng messages trong buffer để tránh quá token limit
+const MAX_BUFFER_LENGTH = 20; // Có thể điều chỉnh số này
+
 /* */
-let buffer = [
-    {
-        role: "user",
-        content: "Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool."
-    }
-];
+let buffer = [SYSTEM_PROMPT];
 let lastBotMessage = "";
+
+// Initialize chat history
+const chatHistory = new ChatHistory();
+
+// Load history at startup
+async function initializeHistory() {
+    const savedBuffer = await chatHistory.load();
+    if (savedBuffer && savedBuffer.length > 0) {
+        buffer = savedBuffer;
+    }
+}
+
+// Save current buffer
+async function saveBuffer() {
+    await chatHistory.save(buffer);
+}
 
 const tools_list = [
     {
@@ -97,11 +118,34 @@ function createErrorResponse(message, isToolUse = false) {
     return createResponse(message, isToolUse, true);
 }
 
+/* Reset buffer về trạng thái ban đầu với system prompt */
 function clearBuffer() {
-    buffer = [];
+    buffer = [SYSTEM_PROMPT];
+    saveBuffer(); // Save empty buffer
+    console.log("Buffer has been cleared and reset to initial state");
+}
+
+/* Kiểm tra và cắt bớt buffer nếu quá dài */
+function trimBufferIfNeeded() {
+    if (buffer.length > MAX_BUFFER_LENGTH) {
+        // Giữ system prompt và các tin nhắn gần nhất
+        const trimmedBuffer = [
+            SYSTEM_PROMPT,
+            ...buffer.slice(-(MAX_BUFFER_LENGTH - 1))
+        ];
+        buffer = trimmedBuffer;
+        saveBuffer();
+        console.log(`Buffer was too long and has been trimmed to ${MAX_BUFFER_LENGTH} messages`);
+    }
 }
 
 async function sendChat(text) {
+    // Check if user wants to clear context
+    if (text.toLowerCase().includes('forget') || text.toLowerCase().includes('reset context')) {
+        clearBuffer();
+        return createResponse("Context has been reset. How can I help you?");
+    }
+
     buffer.push({ role: "user", content: text });
 
     /* Fetch */
@@ -119,7 +163,7 @@ async function sendChat(text) {
     }
     catch (err) {
         buffer.pop();
-        // console.log(`Network error: ${err.message}`)
+        console.log(`Network error: ${err.message}`)
         return createErrorResponse(`Site network error: ${err.message}`);
     }
 
@@ -131,14 +175,21 @@ async function sendChat(text) {
 
     const data = await response.json();
     if (!data.message) {
-        // console.log("Unexpected response format from Ollama");
+        console.log("Unexpected response format from Ollama");
         return;
     }
     const message = data.message;
 
     /* Print content */
-    // console.log(JSON.stringify(data, null, 4));
-    buffer.push({ role: message.role, content: message.content })
+    console.log(JSON.stringify(data, null, 4));
+    buffer.push({ role: message.role, content: message.content });
+
+    // Kiểm tra và cắt bớt buffer nếu cần
+    trimBufferIfNeeded();
+
+    // Save buffer after each message
+    await saveBuffer();
+
     return createResponse(message.content);
 }
 
@@ -242,5 +293,7 @@ module.exports = {
     sendChat, sendChat_Tool, sendChat_ToolResponse,
     toolHandlers,
     getLastBotMessage,
-    clearBuffer
+    clearBuffer,
+    initializeHistory,
+    chatHistory
 };

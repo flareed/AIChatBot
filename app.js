@@ -1,6 +1,7 @@
 const path = require('path');
 const bodyParser = require('body-parser');
 const express = require('express');
+const { sendChat, sendChat_Tool, sendChat_ToolResponse, toolHandlers, initializeHistory, chatHistory } = require('./lib_chatbot_core');
 
 require(path.join(__dirname, "lib_load_env.js")); // dot.env
 const chatbox = require(path.join(__dirname, "lib_chatbot_core.js"));
@@ -11,6 +12,38 @@ const app = express();
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+/* Initialize chat history when starting server */
+(async () => {
+    try {
+        await initializeHistory();
+        console.log('Chat history loaded successfully');
+    } catch (error) {
+        console.error('Error loading chat history:', error);
+    }
+})();
+
+/* Get chat history */
+app.get('/api/history', async (req, res) => {
+    try {
+        const history = await chatbox.chatHistory.load();
+        res.json({ history });
+    } catch (error) {
+        console.error('Error loading history:', error);
+        res.status(500).json({ error: 'Failed to load history' });
+    }
+});
+
+/* Clear chat history */
+app.post('/api/clear-history', async (req, res) => {
+    try {
+        await chatbox.clearBuffer();
+        res.json({ success: true, message: 'Chat history cleared' });
+    } catch (error) {
+        console.error('Error clearing history:', error);
+        res.status(500).json({ error: 'Failed to clear history' });
+    }
+});
 
 /* app.post: will only receive when user send a message
     1. Send user's message
