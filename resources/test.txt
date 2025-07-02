@@ -1,0 +1,2 @@
+Line 1 of test.txt
+Line 2 example

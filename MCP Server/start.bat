@@ -1,1 +1,0 @@
-cmd /k node index.js resources

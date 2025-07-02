@@ -1,0 +1,34 @@
+{
+    "model": "llama3.2",
+    "created_at": "2025-07-01T08:51:07.6737098Z",
+    "message": {
+        "role": "assistant",
+        "content": "It looks like you're using a custom alphabet substitution. What's the next letter?"
+    },
+    "done_reason": "stop",
+    "done": true,
+    "total_duration": 168027100,
+    "load_duration": 14553200,
+    "prompt_eval_count": 40,
+    "prompt_eval_duration": 2075200,
+    "eval_count": 18,
+    "eval_duration": 150851900
+}
+
+{
+    "model": "llama3.2",
+    "created_at": "2025-07-01T08:51:08.0313623Z",
+    "message": {
+        "role": "assistant",
+        "content": "To calculate A * B, we multiply the values of A and B.\n\nA = 5\nB = 12\n\nA * B = 5 * 12 = 60"
+    },
+    "done_reason": "stop",
+    "done": true,
+    "total_duration": 346977400,
+    "load_duration": 13779400,
+    "prompt_eval_count": 71,
+    "prompt_eval_duration": 3129500,
+    "eval_count": 38,
+    "eval_duration": 329031100
+}
+

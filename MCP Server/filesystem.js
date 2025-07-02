@@ -9,6 +9,8 @@ import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { createTwoFilesPatch } from 'diff';
 import { minimatch } from 'minimatch';
+import { parseOfficeAsync } from "officeparser";
+
 // Command line argument parsing
 const args = process.argv.slice(2);
 if (args.length === 0) {
@@ -250,6 +252,18 @@ async function applyFileEdits(filePath, edits, dryRun = false) {
     }
     return formattedDiff;
 }
+async function isFileExists(filePath) {
+    try {
+        await fs.access(filePath);
+        return true;
+    } catch (err) {
+        if (err.code === "ENOENT") {
+            return false; // file does not exist
+        }
+        return false;
+    }
+}
+
 // Tool handlers
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
@@ -357,7 +371,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     throw new Error(`Invalid arguments for read_file: ${parsed.error}`);
                 }
                 const validPath = await validatePath(parsed.data.path);
-                const content = await fs.readFile(validPath, "utf-8");
+
+                /* File exist*/
+                if (!await isFileExists(validPath)) {
+                    return {
+                        content: [{ type: "text", text: "Error: file does not exist" }],
+                        isError: true
+                    };
+                }
+
+                /* Read branching (with or without library) */
+                let content = "";
+                const ext_name = path.extname(validPath);
+                if (ext_name == ".doc" || ext_name == ".docx" || ext_name == ".pdf" || ext_name == ".pptx") {
+                    content = await parseOfficeAsync(validPath);
+                }
+                else {
+                    content = await fs.readFile(validPath, "utf-8");
+                }
+
                 return {
                     content: [{ type: "text", text: content }],
                 };
@@ -454,9 +486,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const treeData = await buildTree(parsed.data.path);
                 return {
                     content: [{
-                            type: "text",
-                            text: JSON.stringify(treeData, null, 2)
-                        }],
+                        type: "text",
+                        text: JSON.stringify(treeData, null, 2)
+                    }],
                 };
             }
             case "move_file": {
@@ -490,17 +522,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const validPath = await validatePath(parsed.data.path);
                 const info = await getFileStats(validPath);
                 return {
-                    content: [{ type: "text", text: Object.entries(info)
-                                .map(([key, value]) => `${key}: ${value}`)
-                                .join("\n") }],
+                    content: [{
+                        type: "text", text: Object.entries(info)
+                            .map(([key, value]) => `${key}: ${value}`)
+                            .join("\n")
+                    }],
                 };
             }
             case "list_allowed_directories": {
                 return {
                     content: [{
-                            type: "text",
-                            text: `Allowed directories:\n${allowedDirectories.join('\n')}`
-                        }],
+                        type: "text",
+                        text: `Allowed directories:\n${allowedDirectories.join('\n')}`
+                    }],
                 };
             }
             default:
