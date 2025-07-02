@@ -1,6 +1,6 @@
 const path = require('path');
 require(path.join(__dirname, "load_env.js"))
-var buffers = [];
+var buffer = [];
 tools_list = [
     {
         "type": "function",
@@ -81,7 +81,7 @@ async function sendPrompt(text) {
 async function sendChat(text) {
     const ollama_url = `http://${process.env.OLLAMA_HOST}:${process.env.OLLAMA_PORT}`;
     const model = process.env.MODEL;
-    buffers.push({ role: "user", content: text });
+    buffer.push({ role: "user", content: text });
 
     /* Fetch */
     let response = {};
@@ -91,7 +91,7 @@ async function sendChat(text) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 model: model,
-                messages: buffers,
+                messages: buffer,
                 stream: false,
             })
         });
@@ -116,7 +116,7 @@ async function sendChat(text) {
 
     /* Print content */
     console.log(JSON.stringify(data, null, 4));
-    buffers.push({ role: message.role, content: message.content })
+    buffer.push({ role: message.role, content: message.content })
     console.log(`Response: ${message.content}`);
     return message.content;
 }
@@ -129,7 +129,7 @@ async function sendChat(text) {
 async function sendChat_Tool(text) {
     const ollama_url = `http://${process.env.OLLAMA_HOST}:${process.env.OLLAMA_PORT}`;
     const model = process.env.MODEL;
-    buffers.push({ role: "user", content: text });
+    buffer.push({ role: "user", content: text });
 
     /* Fetch */
     let response = {};
@@ -139,7 +139,7 @@ async function sendChat_Tool(text) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 model: model,
-                messages: buffers,
+                messages: buffer,
                 tools: tools_list,
                 stream: false,
             })
@@ -171,8 +171,8 @@ async function sendChat_Tool(text) {
     /* Print content */
     console.log(JSON.stringify(data, null, 4));
     const tool_calls = message.tool_calls;
-    // buffers.push({ role: message.role, content: "", tool_calls: JSON.stringify(tool_calls, null, 2) })
-    buffers.push({ role: message.role, content: "", tool_calls: tool_calls })
+    // buffer.push({ role: message.role, content: "", tool_calls: JSON.stringify(tool_calls, null, 2) })
+    buffer.push({ role: message.role, content: "", tool_calls: tool_calls })
     return tool_calls[0];
 }
 
@@ -184,7 +184,7 @@ async function sendChat_Tool(text) {
 async function sendChat_ToolResponse(text, function_name) {
     const ollama_url = `http://${process.env.OLLAMA_HOST}:${process.env.OLLAMA_PORT}`;
     const model = process.env.MODEL;
-    buffers.push({ role: "tool", name: function_name, content: text });
+    buffer.push({ role: "tool", name: function_name, content: text });
 
     /* Fetch */
     let response = {};
@@ -194,7 +194,7 @@ async function sendChat_ToolResponse(text, function_name) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 model: model,
-                messages: buffers,
+                messages: buffer,
                 tools: tools_list,
                 stream: false
             })
@@ -220,7 +220,7 @@ async function sendChat_ToolResponse(text, function_name) {
 
     /* Print content */
     console.log(JSON.stringify(data, null, 4));
-    buffers.push({ role: message.role, content: message.content })
+    buffer.push({ role: message.role, content: message.content })
     console.log(`Response: ${message.content}`);
     return message.content;
 }
@@ -239,15 +239,15 @@ function calculate(bank, money, month) {
     // await sendPrompt("What is a llama?");
 
     // console.log("Chat type");
-    // buffers.push({ role: "system", content: "Welcome to the chatbot!!!" });
+    // buffer.push({ role: "system", content: "Welcome to the chatbot!!!" });
     // await sendChat("A = 5, B = 12");
     // console.log("\n");
     // await sendChat("Calculate A * B");
-    // console.log(buffers);
+    // console.log(buffer);
 
     console.log("Tool calling type");
-    buffers = [];
-    buffers.push({
+    buffer = [];
+    buffer.push({
         role: "system",
         content: "Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool."
     });
@@ -261,7 +261,7 @@ function calculate(bank, money, month) {
     // else {
     //     await sendChat_ToolResponse(`There is no such function available`, temp.function.name);
     // }
-    // console.log(buffers);
+    // console.log(buffer);
 
     console.log();
 })();
