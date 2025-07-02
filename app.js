@@ -32,21 +32,23 @@ app.post('/api/chat', async (req, res) => {
     /* Check if is tool call */
     const isToolCall = false;
     if (isToolCall) {
-        // const functionName = response.function?.name;
-        // const args = response.function?.arguments;
+        // tools.forEach(tool => {
+        //     const functionName = response.function?.name;
+        //     const args = response.function?.arguments;
 
-        // const toolHandlers = chatbox.toolHandlers;
-        // if (toolHandlers[functionName]) {
-        //     const resultText = toolHandlers[functionName](args);
-        //     const reply = await chatbox.sendChat_ToolResponse(resultText, functionName);
-        //     console.log(`Tool call handled: ${functionName}`);
-        //     console.log(`Raw args from tool call:`, args);
-        //     return res.json({ reply });
-        // } else {
-        //     const reply = await sendChat_ToolResponse(`No such tool`, functionName);
-        //     console.log(`No handler for tool: ${functionName}`);
-        //     return res.json({ reply });
-        // }
+        //     const toolHandlers = chatbox.toolHandlers;
+        //     if (toolHandlers[functionName]) {
+        //         const resultText = toolHandlers[functionName](args);
+        //         const reply = await chatbox.sendChat_ToolResponse(resultText, functionName);
+        //         console.log(`Tool call handled: ${functionName}`);
+        //         console.log(`Raw args from tool call:`, args);
+        //         return res.json({ reply });
+        //     } else {
+        //         const reply = await sendChat_ToolResponse(`No such tool`, functionName);
+        //         console.log(`No handler for tool: ${functionName}`);
+        //         return res.json({ reply });
+        //     }
+        // });
     }
 
     /* */

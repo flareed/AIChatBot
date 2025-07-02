@@ -184,7 +184,7 @@ async function sendChat_Tool(text) {
     // console.log(JSON.stringify(data, null, 4));
     const tool_calls = message.tool_calls;
     buffer.push({ role: message.role, content: "", tool_calls: tool_calls })
-    return createResponse(tool_calls[0], true);
+    return createResponse(tool_calls, true);
 }
 
 /* Must provide context of the assisant tool_calls and reply the function result 
