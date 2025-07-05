@@ -41,72 +41,92 @@ const tools_list = [
     {
         type: "function",
         function: {
-            name: "add_numbers",
-            description: "Add two numbers and return the result",
+            name: "readFile",
+            description: "Read the content of a file",
             parameters: {
                 type: "object",
                 properties: {
-                    a: { type: "number", description: "The first number" },
-                    b: { type: "number", description: "The second number" }
+                    filepath: { type: "string", description: "The relative path to the file" },
                 },
-                required: ["a", "b"]
+                required: ["filepath"]
             }
         }
     },
     {
         type: "function",
         function: {
-            name: "days_until",
-            description: "Calculate how many days until a given date (yyyy-mm-dd)",
+            name: "categorizeFile",
+            description: "Categorize a file on the hard drive",
             parameters: {
                 type: "object",
                 properties: {
-                    date: { type: "string", description: "Future date in yyyy-mm-dd format" }
+                    filepath: { type: "string", description: "The relative path to the file" },
                 },
-                required: ["date"]
+                required: ["filepath"]
             }
         }
     },
     {
         type: "function",
         function: {
-            name: "string_length",
-            description: "Return the length of a string",
+            name: "categorizeFiles",
+            description: "Categorize a list of files on the hard drive",
             parameters: {
                 type: "object",
                 properties: {
-                    input: { type: "string", description: "The string to measure" }
+                    filepaths:
+                    {
+                        type: "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        description: "An array of filepaths, each element is a filepath"
+                    },
                 },
-                required: ["input"]
+                required: ["filepaths"]
             }
         }
-    }
+    },
+    {
+        type: "function",
+        function: {
+            name: "listDirectory",
+            description: "List the files/directories from the rootpath (ex: \"C:/\" what folders & files inside it)",
+            parameters: {
+                type: "object",
+                properties: {
+                    rootpath: { type: "string", description: "The rootpath from which we list the content (default is \"/\"" },
+                },
+                required: ["rootpath"]
+            }
+        }
+    },
 ];
 
 const toolHandlers = {
-    add_numbers: (args) => {
-        const result = args.a + args.b;
-        return `The sum of ${args.a} and ${args.b} is ${result}`;
-    },
+    // add_numbers: (args) => {
+    //     const result = args.a + args.b;
+    //     return `The sum of ${args.a} and ${args.b} is ${result}`;
+    // },
 
-    days_until: (args) => {
-        const now = new Date();
-        const target = new Date(args.date);
-        const diffTime = target.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays < 0) {
-            return `That date is ${Math.abs(diffDays)} days ago.`;
-        } else if (diffDays === 0) {
-            return `That is today!`;
-        } else {
-            return `There are ${diffDays} day(s) until ${args.date}.`;
-        }
-    },
+    // days_until: (args) => {
+    //     const now = new Date();
+    //     const target = new Date(args.date);
+    //     const diffTime = target.getTime() - now.getTime();
+    //     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    //     if (diffDays < 0) {
+    //         return `That date is ${Math.abs(diffDays)} days ago.`;
+    //     } else if (diffDays === 0) {
+    //         return `That is today!`;
+    //     } else {
+    //         return `There are ${diffDays} day(s) until ${args.date}.`;
+    //     }
+    // },
 
-    string_length: (args) => {
-        const length = args.input.length;
-        return `The length of the string "${args.input}" is ${length} character(s).`;
-    }
+    // string_length: (args) => {
+    //     const length = args.input.length;
+    //     return `The length of the string "${args.input}" is ${length} character(s).`;
+    // }
 };
 
 // ------------------------ TOOL HANDLERS ------------------------
@@ -137,6 +157,47 @@ function trimBufferIfNeeded() {
         saveBuffer();
         console.log(`Buffer was too long and has been trimmed to ${MAX_BUFFER_LENGTH} messages`);
     }
+}
+
+async function sendPrompt(text) {
+    const ollama_url = `http://${process.env.OLLAMA_HOST}:${process.env.OLLAMA_PORT}`;
+    const model = process.env.MODEL;
+
+    /* Fetch */
+    let response = {};
+    try {
+        response = await fetch(`${ollama_url}/api/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: model,
+                prompt: text,
+                stream: false,
+            })
+        });
+    }
+    catch (err) {
+        buffer.pop();
+        console.log(`Network error: ${err.message}`)
+        return createErrorResponse(`Site network error: ${err.message}`);
+    }
+
+    /* Error handling */
+    if (!response.ok) {
+        buffer.pop();
+        return createErrorResponse(`HTTP error: ${response.status}, ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data.response) {
+        // console.log(ERR_MODEL_UNKNOWN_RESPONSE);
+        return createErrorResponse(ERR_MODEL_UNKNOWN_RESPONSE);
+    }
+
+    /* Print content */
+    // console.log(JSON.stringify(data, null, 4));
+    // console.log(`Response: ${data.response}`);
+    return createResponse(data.response, false);
 }
 
 async function sendChat(text) {
@@ -175,19 +236,17 @@ async function sendChat(text) {
 
     const data = await response.json();
     if (!data.message) {
-        console.log("Unexpected response format from Ollama");
-        return;
+        // console.log(ERR_MODEL_UNKNOWN_RESPONSE);
+        return createErrorResponse(ERR_MODEL_UNKNOWN_RESPONSE);
     }
     const message = data.message;
 
     /* Print content */
     console.log(JSON.stringify(data, null, 4));
-    buffer.push({ role: message.role, content: message.content });
-
-    // Kiểm tra và cắt bớt buffer nếu cần
-    trimBufferIfNeeded();
+    buffer.push({ role: "assistant", content: message.content });
 
     // Save buffer after each message
+    trimBufferIfNeeded();
     await saveBuffer();
 
     return createResponse(message.content);
@@ -234,11 +293,24 @@ async function sendChat_Tool(text) {
     /* Print content */
     // console.log(JSON.stringify(data, null, 4));
     const tool_calls = message.tool_calls;
-    buffer.push({ role: message.role, content: "", tool_calls: tool_calls })
+    buffer.push({ role: "assistant", content: "", tool_calls: tool_calls })
+
+    // Save buffer after each message
+    trimBufferIfNeeded();
+    await saveBuffer();
+
     return createResponse(tool_calls, true);
 }
 
-/* Must provide context of the assisant tool_calls and reply the function result 
+function addAssistantMessageToBuffer(text) {
+    buffer.push({ role: "assistant", content: `The result is: ${text}}` });
+}
+
+function addToolResponseToBuffer(result, function_name) {
+    buffer.push({ role: "tool", name: function_name, content: `The result is: ${result}}` });
+}
+
+/* Must provide context of the assistant tool_calls and reply the function result 
     Role: user/assistant/tool
         assistant: tool_calls context
         tool: function result
@@ -274,14 +346,15 @@ async function sendChat_ToolResponse(text, function_name) {
 
     const data = await response.json();
     if (!data.message) {
-        // console.log("Unexpected response format from Ollama");
-        return;
+        // console.log(ERR_MODEL_UNKNOWN_RESPONSE);
+        return createErrorResponse(ERR_MODEL_UNKNOWN_RESPONSE);
     }
     const message = data.message;
 
     /* Print content */
     // console.log(JSON.stringify(data, null, 4));
-    buffer.push({ role: message.role, content: message.content })
+    buffer.push({ role: "assistant", content: message.content })
+
     return createResponse(message);
 }
 
@@ -290,10 +363,9 @@ function getLastBotMessage() {
 }
 
 module.exports = {
-    sendChat, sendChat_Tool, sendChat_ToolResponse,
+    sendPrompt, sendChat, sendChat_Tool, sendChat_ToolResponse,
     toolHandlers,
     getLastBotMessage,
-    clearBuffer,
-    initializeHistory,
-    chatHistory
+    saveBuffer, clearBuffer, addAssistantMessageToBuffer, addToolResponseToBuffer,
+    initializeHistory, chatHistory,
 };

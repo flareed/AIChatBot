@@ -115,7 +115,7 @@ async function searchFiles(rootpath, pattern, excludePatterns) {
     // })
     await connectClient();
 
-    // await readFile("test.pdf");
+    // console.log(await readFile("test.pdf"));
 
     // await listDirectory("/Level 1 Directory");
 

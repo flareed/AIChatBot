@@ -5,26 +5,29 @@
   },
   {
     "role": "user",
-    "content": "chào bạn, tôi là Phúc. Bạn có thể cho tôi biết ai là người đầu tiên bước lên mặt trăng không?"
+    "content": "List thư mục"
   },
   {
     "role": "assistant",
-    "content": "Xin chào Phúc!\n\nNgười đầu tiên bước lên mặt trăng là Neil Armstrong, một phi hành gia của NASA. Ông đã thực hiện thành công việc nhảy trên mặt trăng vào ngày 20 tháng 7 năm 1969 trong chuyến phi hành đến Trái đất số 11 của chương trình Gemini và Apollo.\n\nNeil Armstrong đã trở thành người đầu tiên đặt chân lên mặt trăng vào lúc 02:56 giờ GMT, sau khi máy bay không người lái Eagle hạ cánh xuống bề mặt Mặt trăng. Đây là một ngày lịch sử quan trọng trong lịch sử vũ trụ và được coi là một thành tựu vượt qua những thách thức đáng kể."
+    "content": "",
+    "tool_calls": [
+      {
+        "function": {
+          "name": "listDirectory",
+          "arguments": {
+            "rootpath": "/"
+          }
+        }
+      }
+    ]
   },
   {
-    "role": "user",
-    "content": "Ai là người đầu tiên đạt giải nobel Vật lý?"
+    "role": "tool",
+    "name": "listDirectory",
+    "content": "The result is: [DIR] Level 1 Directory\n[FILE] Template.docx\n[FILE] test.pdf\n[FILE] test.txt}"
   },
   {
     "role": "assistant",
-    "content": "Phúc!\n\nNgười đầu tiên đạt giải Nobel Vật lý là Wilhelm Conrad Röntgen, một nhà vật lý Đức. Ông đã được trao giải Nobel Vật lý năm 1901 vì phát minh ra tia X (radiation X) và khám phá ra hiện tượng này.\n\nRöntgen đã phát hiện ra tia X vào tháng 11/1895 khi ông đang nghiên cứu về các bức xạ từ các kim loại. Ông đã bắt đầu sử dụng máy chụp X-QUANTUM để chụp hình ảnh của một vật thể mà không cần đến ánh sáng mặt trời.\n\nSau đó, Röntgen đã được trao giải Nobel Vật lý năm 1901 vì đóng góp quan trọng của ông đối với lĩnh vực vật lý."
-  },
-  {
-    "role": "user",
-    "content": "Bạn có thể cho tôi biết nguyên văn câu đầu tiên tôi chat với bạn không"
-  },
-  {
-    "role": "assistant",
-    "content": "Câu đầu tiên của bạn là: \"chào bạn, tôi là Phúc. Bạn có thể cho tôi biết ai là người đầu tiên bước lên mặt trăng không?\""
+    "content": "The result is: [DIR] Level 1 Directory\n[FILE] Template.docx\n[FILE] test.pdf\n[FILE] test.txt}"
   }
 ]
