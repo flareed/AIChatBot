@@ -129,19 +129,22 @@ $('#send_button').on('click', function (e) {
 	showUserMessage(userMessage);
 	$('#msg_input').val('');
 
-	fetch('/api/chat', {
+	const useTool = $('#use_tool_checkbox').is(':checked');
+	const apiEndpoint = useTool ? '/api/chat-with-tools' : '/api/chat';
+
+	fetch(apiEndpoint, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ message: userMessage })
 	})
-		.then(res => res.json())
-		.then(data => {
-			showBotMessage(data.reply);
-		})
-		.catch(err => {
-			showBotMessage("Error: Could not connect to server.");
-			console.error(err);
-		});
+	.then(res => res.json())
+	.then(data => {
+		showBotMessage(data.reply);
+	})
+	.catch(err => {
+		showBotMessage("Error: Could not connect to server.");
+		console.error(err);
+	});
 });
 
 /**
@@ -208,3 +211,41 @@ $('#clear_button').on('click', async function () {
 		await clearHistory();
 	}
 });
+
+// Add tools information to the accordion
+fetch('/api/tools')
+    .then(res => res.json())
+    .then(data => {
+        const tools = data.tools;
+        const accordion = $('#accordion');
+
+        // Clear default content
+        accordion.empty();
+
+        tools.forEach((tool, index) => {
+            const id = `collapse${index + 1}`;
+            const name = tool.function.name;
+            const description = tool.function.description;
+
+            const panelHTML = `
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h4 class="panel-title">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#${id}">
+                                ${name}
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="${id}" class="panel-collapse collapse${index === 0 ? ' in' : ''}">
+                        <div class="panel-body">${description}</div>
+                    </div>
+                </div>
+            `;
+
+            accordion.append(panelHTML);
+        });
+    })
+    .catch(err => {
+        console.error("Failed to load tools", err);
+        $('#accordion').append('<div class="panel-body">Error loading tools.</div>');
+    });

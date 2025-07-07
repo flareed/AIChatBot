@@ -1,33 +1,6 @@
 [
   {
     "role": "user",
-    "content": "Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool."
-  },
-  {
-    "role": "user",
-    "content": "List thư mục"
-  },
-  {
-    "role": "assistant",
-    "content": "",
-    "tool_calls": [
-      {
-        "function": {
-          "name": "listDirectory",
-          "arguments": {
-            "rootpath": "/"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "role": "tool",
-    "name": "listDirectory",
-    "content": "The result is: [DIR] Level 1 Directory\n[FILE] Template.docx\n[FILE] test.pdf\n[FILE] test.txt}"
-  },
-  {
-    "role": "assistant",
-    "content": "The result is: [DIR] Level 1 Directory\n[FILE] Template.docx\n[FILE] test.pdf\n[FILE] test.txt}"
+    "content": "Only call a function if the user explicitly asks for it"
   }
 ]

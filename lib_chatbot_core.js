@@ -11,7 +11,7 @@ const ERR_MODEL_UNKNOWN_RESPONSE = "Something is wrong with the model, please tr
 /* System prompt - hướng dẫn cơ bản cho AI */
 const SYSTEM_PROMPT = {
     role: "user",
-    content: "Only call a function if the user explicitly asks for a calculation, date difference, or string analysis. For all other questions, answer directly without using any tool."
+    content: "Only call a function if the user explicitly asks for it"
 };
 
 // Giới hạn số lượng messages trong buffer để tránh quá token limit
@@ -102,32 +102,6 @@ const tools_list = [
         }
     },
 ];
-
-const toolHandlers = {
-    // add_numbers: (args) => {
-    //     const result = args.a + args.b;
-    //     return `The sum of ${args.a} and ${args.b} is ${result}`;
-    // },
-
-    // days_until: (args) => {
-    //     const now = new Date();
-    //     const target = new Date(args.date);
-    //     const diffTime = target.getTime() - now.getTime();
-    //     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    //     if (diffDays < 0) {
-    //         return `That date is ${Math.abs(diffDays)} days ago.`;
-    //     } else if (diffDays === 0) {
-    //         return `That is today!`;
-    //     } else {
-    //         return `There are ${diffDays} day(s) until ${args.date}.`;
-    //     }
-    // },
-
-    // string_length: (args) => {
-    //     const length = args.input.length;
-    //     return `The length of the string "${args.input}" is ${length} character(s).`;
-    // }
-};
 
 // ------------------------ TOOL HANDLERS ------------------------
 function createResponse(message, isToolUse = false, isError = false) {
@@ -362,10 +336,14 @@ function getLastBotMessage() {
     return lastBotMessage;
 }
 
+function getToolsList() {
+    return tools_list;
+}
+
 module.exports = {
     sendPrompt, sendChat, sendChat_Tool, sendChat_ToolResponse,
-    toolHandlers,
     getLastBotMessage,
     saveBuffer, clearBuffer, addAssistantMessageToBuffer, addToolResponseToBuffer,
     initializeHistory, chatHistory,
+    getToolsList,
 };

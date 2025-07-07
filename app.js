@@ -51,7 +51,21 @@ app.post('/api/clear-history', async (req, res) => {
         3.5 If tool call, call sendChat_Tool
     4. Send chatbot message
 */
+
 app.post('/api/chat', async (req, res) => {
+    const userMessage = req.body.message;
+
+    const response = await chatbot.sendChat(userMessage);
+    if (response.isError) {
+        console.log(`Error: ${response.message}`);
+        return res.json({ reply: `${response.message}, please try again` });
+    }
+
+    return res.json({ reply: response.message });
+});
+
+
+app.post('/api/chat-with-tools', async (req, res) => {
     const userMessage = req.body.message;
 
     /* */
@@ -92,27 +106,7 @@ app.post('/api/chat', async (req, res) => {
         chatbot.addAssistantMessageToBuffer(content.message);
         await chatbot.saveBuffer();
         return res.json({ reply: content.message });
-
-        // tools.forEach(tool => {
-        //     const functionName = response.function?.name;
-        //     const args = response.function?.arguments;
-
-        //     const toolHandlers = chatbox.toolHandlers;
-        //     if (toolHandlers[functionName]) {
-        //         const resultText = toolHandlers[functionName](args);
-        //         const reply = await chatbox.sendChat_ToolResponse(resultText, functionName);
-        //         console.log(`Tool call handled: ${functionName}`);
-        //         console.log(`Raw args from tool call:`, args);
-        //         return res.json({ reply });
-        //     } else {
-        //         const reply = await sendChat_ToolResponse(`No such tool`, functionName);
-        //         console.log(`No handler for tool: ${functionName}`);
-        //         return res.json({ reply });
-        //     }
-        // });
     }
-
-
 
     /* */
     // const test_listdirectory = await mcp.listDirectory();
@@ -122,6 +116,10 @@ app.post('/api/chat', async (req, res) => {
     // }
 
     return res.json({ reply: response.message });
+});
+
+app.get('/api/tools', (req, res) => {
+    res.json({ tools: chatbot.getToolsList() });
 });
 
 app.listen(process.env.SITE_PORT, () => {
