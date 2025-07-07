@@ -269,9 +269,9 @@ async function sendChat_Tool(text) {
     const tool_calls = message.tool_calls;
     buffer.push({ role: "assistant", content: "", tool_calls: tool_calls })
 
-    // Save buffer after each message
+    // KHÔNG lưu buffer ở đây nữa!
     trimBufferIfNeeded();
-    await saveBuffer();
+    // await saveBuffer();
 
     return createResponse(tool_calls, true);
 }

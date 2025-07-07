@@ -26,7 +26,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/history', async (req, res) => {
     try {
         const history = await chatbot.chatHistory.load();
-        res.json({ history });
+        // Lọc lịch sử: chỉ trả về user hoặc assistant có content khác rỗng
+        const filteredHistory = history.filter(msg => {
+            if (msg.role === 'user') return true;
+            if (msg.role === 'assistant' && msg.content && msg.content.trim() !== '') return true;
+            return false;
+        });
+        res.json({ history: filteredHistory });
     } catch (error) {
         console.error('Error loading history:', error);
         res.status(500).json({ error: 'Failed to load history' });

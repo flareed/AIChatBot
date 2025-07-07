@@ -2,5 +2,40 @@
   {
     "role": "user",
     "content": "Only call a function if the user explicitly asks for it"
+  },
+  {
+    "role": "user",
+    "content": "who is the first president of USA"
+  },
+  {
+    "role": "assistant",
+    "content": "The first President of the United States was George Washington."
+  },
+  {
+    "role": "user",
+    "content": "listDirectory"
+  },
+  {
+    "role": "assistant",
+    "content": "",
+    "tool_calls": [
+      {
+        "function": {
+          "name": "listDirectory",
+          "arguments": {
+            "rootpath": "/"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "name": "listDirectory",
+    "content": "The result is: [DIR] Level 1 Directory\n[FILE] Template.docx\n[FILE] test.pdf\n[FILE] test.txt}"
+  },
+  {
+    "role": "assistant",
+    "content": "The result is: [DIR] Level 1 Directory\n[FILE] Template.docx\n[FILE] test.pdf\n[FILE] test.txt}"
   }
 ]
