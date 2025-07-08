@@ -50,27 +50,22 @@ app.post('/api/clear-history', async (req, res) => {
     }
 });
 
-/* app.post: will only receive when user send a message
-    1. Send user's message
-    2. Receive message from chatbox
-    3. Check if need tool call
-        3.5 If tool call, call sendChat_Tool
-    4. Send chatbot message
-*/
-
+/* For normal chat */
 app.post('/api/chat', async (req, res) => {
     const userMessage = req.body.message;
 
+    /* */
     const response = await chatbot.sendChat(userMessage);
     if (response.isError) {
         console.log(`Error: ${response.message}`);
         return res.json({ reply: `${response.message}, please try again` });
     }
 
+    /* */
     return res.json({ reply: response.message });
 });
 
-
+/* For tool chat */
 app.post('/api/chat-with-tools', async (req, res) => {
     const userMessage = req.body.message;
 
@@ -81,49 +76,40 @@ app.post('/api/chat-with-tools', async (req, res) => {
         return res.json({ reply: `${response.message}, please try again` });
     }
 
-    /* Check if is tool call */
-    const isToolUse = response.isToolUse;
-    if (isToolUse) {
-        const tools = response.message;
+    /* */
+    const tools = response.message;
+    const tool = tools[0];
+    const functionName = tool.function.name;
+    const args = tool.function.arguments;
 
-        const tool = tools[0];
-        const functionName = tool.function.name;
-        const args = tool.function.arguments;
-
-        let content = "";
-        switch (functionName) {
-            case "readFile":
-                const filepath_readfile = args.filepath;
-                content = await mcp.readFile(filepath_readfile);
-                break;
-            case "categorizeFile":
-                const filepath_categorizefile = args.filepath;
-                const filecontent = await mcp.readFile(filepath_categorizefile);
-                content = await chatbot.sendPrompt(`Categorize the following content, return it as follow: $CATEGORY$ (without the $) \n\'${filecontent.message}\'`)
-                break;
-            case "listDirectory":
-                const rootpath = args.rootpath;
-                content = await mcp.listDirectory(rootpath);
-                break;
-            default:
-                return res.json({ reply: "Model supplied unknown tool" });
-        }
-        chatbot.addToolResponseToBuffer(content.message, functionName);
-        chatbot.addAssistantMessageToBuffer(content.message);
-        await chatbot.saveBuffer();
-        return res.json({ reply: content.message });
+    let content = "";
+    switch (functionName) {
+        case "readFile":
+            const filepath_readfile = args.filepath;
+            content = await mcp.readFile(filepath_readfile);
+            break;
+        case "categorizeFile":
+            const filepath_categorizefile = args.filepath;
+            const filecontent = await mcp.readFile(filepath_categorizefile);
+            content = await chatbot.sendPrompt(`Categorize the following content, return it as follow: $CATEGORY$ (without the $) \n\'${filecontent.message}\'`)
+            break;
+        case "listDirectory":
+            const rootpath = args.rootpath;
+            content = await mcp.listDirectory(rootpath);
+            break;
+        default:
+            return res.json({ reply: "Model supplied unknown tool" });
     }
 
     /* */
-    // const test_listdirectory = await mcp.listDirectory();
-    // if (!test_listdirectory.isError)
-    // {
-    //     response.message = test_listdirectory.message;
-    // }
+    chatbot.addToolResponseToBuffer(content.message, functionName);
+    chatbot.addAssistantMessageToBuffer(content.message);
+    await chatbot.saveBuffer();
 
-    return res.json({ reply: response.message });
+    return res.json({ reply: content.message });
 });
 
+/* For displaying tool list on the right side */
 app.get('/api/tools', (req, res) => {
     res.json({ tools: chatbot.getToolsList() });
 });
