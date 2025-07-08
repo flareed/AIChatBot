@@ -8,7 +8,7 @@ body {
 }
 
 .row.padded_row,
-.row.padded_row > div {
+.row.padded_row>div {
 	padding-top: 20px;
 	padding-bottom: 20px;
 }
@@ -25,14 +25,42 @@ body {
 
 .top_menu {
 	background-color: #fff;
-	padding: 13px 0px;
+	width: 100%;
+	padding: 13px 20px;
 	box-shadow: 0 1px 30px rgba(0, 0, 0, 0.1);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
 
 .top_menu .title {
-	text-align: center;
 	color: #337ab7;
 	font-size: 20px;
+	font-weight: 500;
+}
+
+.buttons {
+	margin-right: 0;
+}
+
+#clear_button {
+	cursor: pointer;
+	padding: 5px 10px;
+	font-size: 12px;
+	transition: all 0.3s ease;
+}
+
+#clear_button:hover {
+	opacity: 0.8;
+}
+
+/* Help section specific styles */
+.help_section .top_menu {
+	padding: 13px 20px;
+}
+
+.help_section .title {
+	margin-left: 0;
 }
 
 /* messages inside the chatbox */

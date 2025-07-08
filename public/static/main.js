@@ -42,16 +42,16 @@ function renderMessageToScreen(args) {
 
 /* Sends a message when the 'Enter' key is pressed.
  */
-$(document).ready(function() {
-    $('#msg_input').keydown(function(e) {
-        // Check for 'Enter' key
-        if (e.key === 'Enter') {
-            // Prevent default behaviour of enter key
-            e.preventDefault();
+$(document).ready(function () {
+	$('#msg_input').keydown(function (e) {
+		// Check for 'Enter' key
+		if (e.key === 'Enter') {
+			// Prevent default behaviour of enter key
+			e.preventDefault();
 			// Trigger send button click event
-            $('#send_button').click();
-        }
-    });
+			$('#send_button').click();
+		}
+	});
 });
 
 /**
@@ -77,6 +77,49 @@ function showBotMessage(message, datetime) {
 }
 
 /**
+ * Load and display chat history
+ */
+async function loadChatHistory() {
+	try {
+		const response = await fetch('/api/history');
+		const data = await response.json();
+
+		if (data.history && Array.isArray(data.history)) {
+			// Clear existing messages
+			$('.messages').empty();
+
+			// Skip system prompt and display each message from history
+			let hasMessages = false;
+			data.history.forEach(msg => {
+				// Skip the system prompt
+				if (msg.content.includes("Only call a function if")) {
+					return;
+				}
+
+				if (msg.role === 'user') {
+					showUserMessage(msg.content);
+					hasMessages = true;
+				} else if (msg.role === 'assistant') {
+					showBotMessage(msg.content);
+					hasMessages = true;
+				}
+			});
+
+			// If no messages (new chat), show welcome message
+			if (!hasMessages) {
+				showBotMessage('Hello there! Type in a message.');
+			}
+		} else {
+			// If no history at all, show welcome message
+			showBotMessage('Hello there! Type in a message.');
+		}
+	} catch (error) {
+		console.error('Error loading chat history:', error);
+		showBotMessage('Hello there! Type in a message.');
+	}
+}
+
+/**
  * Get input from user and show it on screen on button click.
  */
 $('#send_button').on('click', function (e) {
@@ -86,7 +129,10 @@ $('#send_button').on('click', function (e) {
 	showUserMessage(userMessage);
 	$('#msg_input').val('');
 
-	fetch('/api/chat', {
+	const useTool = $('#use_tool_checkbox').is(':checked');
+	const apiEndpoint = useTool ? '/api/chat-with-tools' : '/api/chat';
+
+	fetch(apiEndpoint, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ message: userMessage })
@@ -99,6 +145,13 @@ $('#send_button').on('click', function (e) {
 		showBotMessage("Error: Could not connect to server.");
 		console.error(err);
 	});
+});
+
+/**
+ * Set initial bot message and load history when the page loads
+ */
+$(window).on('load', async function () {
+	await loadChatHistory();
 });
 
 /**
@@ -122,6 +175,77 @@ function randomstring(length = 20) {
 /**
  * Set initial bot message to the screen for the user.
  */
-$(window).on('load', function () {
-	showBotMessage('Hello there! Type in a message.');
+//$(window).on('load', function () {
+//showBotMessage('Hello there! Type in a message.');
+//});
+
+/**
+ * Clear chat history
+ */
+async function clearHistory() {
+	try {
+		const response = await fetch('/api/clear-history', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' }
+		});
+		const data = await response.json();
+
+		if (data.success) {
+			// Clear UI
+			$('.messages').empty();
+			// Show welcome message
+			showBotMessage('Hello there! Type in a message.');
+		} else {
+			showBotMessage('Error: Could not clear history.');
+		}
+	} catch (error) {
+		console.error('Error clearing history:', error);
+		showBotMessage('Error: Could not clear history.');
+	}
+}
+
+// Add click handler for clear button
+$('#clear_button').on('click', async function () {
+	// Add confirmation dialog
+	if (confirm('Are you sure you want to clear the chat history?')) {
+		await clearHistory();
+	}
 });
+
+// Add tools information to the accordion
+fetch('/api/tools')
+    .then(res => res.json())
+    .then(data => {
+        const tools = data.tools;
+        const accordion = $('#accordion');
+
+        // Clear default content
+        accordion.empty();
+
+        tools.forEach((tool, index) => {
+            const id = `collapse${index + 1}`;
+            const name = tool.function.name;
+            const description = tool.function.description;
+
+            const panelHTML = `
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h4 class="panel-title">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#${id}">
+                                ${name}
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="${id}" class="panel-collapse collapse${index === 0 ? ' in' : ''}">
+                        <div class="panel-body">${description}</div>
+                    </div>
+                </div>
+            `;
+
+            accordion.append(panelHTML);
+        });
+    })
+    .catch(err => {
+        console.error("Failed to load tools", err);
+        $('#accordion').append('<div class="panel-body">Error loading tools.</div>');
+    });

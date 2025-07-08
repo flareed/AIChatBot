@@ -24,30 +24,37 @@
 <body>
     <div class="container">
         <div class="row padded_row">
-            <!-- right side content -->
+            <!-- Chat section -->
             <div class="col-md-7">
                 <div class="chat_window">
                     <div class="top_menu">
-                        <div class="title">ChatBot - Jarvis</div>
+                        <div class="title">ChatBot</div>
+                        <div class="buttons">
+                            <div id="clear_button" class="btn btn-danger btn-sm" title="Clear chat history">
+                                <i class="fa fa-trash"></i> Clear History
+                            </div>
+                        </div>
                     </div>
 
                     <!-- dynamically rendered -->
                     <ul class="messages"></ul>
-
                     <!-- input -->
                     <div class="bottom_wrapper">
                         <input id="msg_input" placeholder="Say Hi to begin chat..." />
+                        <label style="margin: 0 10px; display: flex; align-items: center;">
+                            <input type="checkbox" id="use_tool_checkbox" style="margin-right: 5px;" />
+                            Use Tools
+                        </label>
                         <div id="send_button" class="app_button_1">Send</div>
                     </div>
-
                 </div>
             </div>
 
-            <!-- left side content -->
+            <!-- help section -->
             <div class="col-md-5">
                 <div class="chat_window">
                     <div class="top_menu">
-                        <div class="title">Help</div>
+                        <div class="title">Available Tools</div>
                     </div>
 
                     <!-- help container -->
@@ -70,6 +77,7 @@
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -81,4 +89,5 @@
     <!-- custom scripts -->
     <script src="static/main.js"></script>
 </body>
+
 </html>
