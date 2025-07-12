@@ -107,6 +107,10 @@ app.post('/api/chat-with-tools', async (req, res) => {
             if (fileContentResult.isError) return res.json({ reply: fileContentResult.message });
             content = await chatbot.sendPrompt(`Summarize the following document:\n\n${fileContentResult.message}`);
             break;
+        case "searchFiles":
+            const { rootpath, pattern, excludePatterns = [] } = args;
+            content = await mcp.searchFiles(rootpath, pattern, excludePatterns);
+            break;
         default:
             return res.json({ reply: "Model supplied unknown tool" });
     }

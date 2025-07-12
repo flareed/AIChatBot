@@ -133,6 +133,32 @@ const tools_list = [
             }
         }
     },
+    {
+        type: "function",
+        function: {
+            name: "searchFiles",
+            description: "Search for files by name or keywords within the resource directory",
+            parameters: {
+                type: "object",
+                properties: {
+                    rootpath: {
+                        type: "string",
+                        description: "The root folder to start searching from (e.g., / or /Fake Files)"
+                    },
+                    pattern: {
+                        type: "string",
+                        description: "Keywords or part of the file name to search"
+                    },
+                    excludePatterns: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "List of patterns to exclude (optional)"
+                    }
+                },
+                required: ["rootpath", "pattern"]
+            }
+        }
+    }
 ];
 
 // ------------------------ TOOL HANDLERS ------------------------
