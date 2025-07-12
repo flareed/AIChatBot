@@ -158,7 +158,21 @@ const tools_list = [
                 required: ["rootpath", "pattern"]
             }
         }
-    }
+    },
+    {
+        type: "function",
+        function: {
+            name: "listDirectory",
+            description: "List the files/directories from the rootpath (ex: \"C:/\" what folders & files inside it)",
+            parameters: {
+                type: "object",
+                properties: {
+                    rootpath: { type: "string", description: "The rootpath from which we list the content (default is \"/\"" },
+                },
+                required: ["rootpath"]
+            }
+        }
+    },
 ];
 
 // ------------------------ TOOL HANDLERS ------------------------
