@@ -184,7 +184,7 @@ async function sendPrompt(text) {
     }
     catch (err) {
         buffer.pop();
-        console.log(`Network error: ${err.message}`)
+        // console.log(`Network error: ${err.message}`)
         return createErrorResponse(`Site network error: ${err.message}`);
     }
 
@@ -230,7 +230,7 @@ async function sendChat(text) {
     }
     catch (err) {
         buffer.pop();
-        console.log(`Network error: ${err.message}`)
+        // console.log(`Network error: ${err.message}`)
         return createErrorResponse(`Site network error: ${err.message}`);
     }
 
@@ -248,7 +248,7 @@ async function sendChat(text) {
     const message = data.message;
 
     /* Print content */
-    console.log(JSON.stringify(data, null, 4));
+    // console.log(JSON.stringify(data, null, 4));
     buffer.push({ role: "assistant", content: message.content });
 
     // Save buffer after each message

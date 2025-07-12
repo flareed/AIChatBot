@@ -26,7 +26,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/history', async (req, res) => {
     try {
         const history = await chatbot.chatHistory.load();
-        res.json({ history });
+        // Lọc lịch sử: chỉ trả về user hoặc assistant có content khác rỗng
+        const filteredHistory = history.filter(msg => {
+            if (msg.role === 'user') return true;
+            if (msg.role === 'assistant' && msg.content && msg.content.trim() !== '') return true;
+            return false;
+        });
+        res.json({ history: filteredHistory });
     } catch (error) {
         console.error('Error loading history:', error);
         res.status(500).json({ error: 'Failed to load history' });
@@ -44,27 +50,22 @@ app.post('/api/clear-history', async (req, res) => {
     }
 });
 
-/* app.post: will only receive when user send a message
-    1. Send user's message
-    2. Receive message from chatbox
-    3. Check if need tool call
-        3.5 If tool call, call sendChat_Tool
-    4. Send chatbot message
-*/
-
+/* For normal chat */
 app.post('/api/chat', async (req, res) => {
     const userMessage = req.body.message;
 
+    /* */
     const response = await chatbot.sendChat(userMessage);
     if (response.isError) {
         console.log(`Error: ${response.message}`);
         return res.json({ reply: `${response.message}, please try again` });
     }
 
+    /* */
     return res.json({ reply: response.message });
 });
 
-
+/* For tool chat */
 app.post('/api/chat-with-tools', async (req, res) => {
     const userMessage = req.body.message;
 
@@ -75,59 +76,48 @@ app.post('/api/chat-with-tools', async (req, res) => {
         return res.json({ reply: `${response.message}, please try again` });
     }
 
-    /* Check if is tool call */
-    const isToolUse = response.isToolUse;
-    if (isToolUse) {
-        const tools = response.message;
-
-        const tool = tools[0];
-        const functionName = tool.function.name;
-        const args = tool.function.arguments;
-
-        let content = "";
-        switch (functionName) {
-            case "readFile":
-                const filepath_readfile = args.filepath;
-                content = await mcp.readFile(filepath_readfile);
-                break;
-            case "categorizeFile":
-                const filepath_categorizefile = args.filepath;
-                const filecontent = await mcp.readFile(filepath_categorizefile);
-                content = await chatbot.sendPrompt(`Categorize the following content, return it as follow: $CATEGORY$ (without the $) \n\'${filecontent.message}\'`)
-                break;
-            case "listDirectory":
-                const filepath_listdirectory = args.rootpath;
-                content = await mcp.listDirectory(filepath_listdirectory);
-                break;
-            case "readMultipleFiles":
-                const filepaths = args.filepaths;
-                content = await mcp.readMultipleFiles(filepaths);
-                break;
-            case "summarizeFile":
-                const filepath = args.filepath;
-                const fileContentResult = await mcp.readFile(filepath);
-                if (fileContentResult.isError) return res.json({ reply: fileContentResult.message });
-                content = await chatbot.sendPrompt(`Summarize the following document:\n\n${fileContentResult.message}`);
-                break;
-            default:
-                return res.json({ reply: "Model supplied unknown tool" });
-        }
-        chatbot.addToolResponseToBuffer(content.message, functionName);
-        chatbot.addAssistantMessageToBuffer(content.message);
-        await chatbot.saveBuffer();
-        return res.json({ reply: content.message });
-    }
-
     /* */
-    // const test_listdirectory = await mcp.listDirectory();
-    // if (!test_listdirectory.isError)
-    // {
-    //     response.message = test_listdirectory.message;
-    // }
+    const tools = response.message;
+    const tool = tools[0];
+    const functionName = tool.function.name;
+    const args = tool.function.arguments;
 
-    return res.json({ reply: response.message });
-});
+    let content = "";
+    switch (functionName) {
+        case "readFile":
+            const filepath_readfile = args.filepath;
+            content = await mcp.readFile(filepath_readfile);
+            break;
+        case "categorizeFile":
+            const filepath_categorizefile = args.filepath;
+            const filecontent = await mcp.readFile(filepath_categorizefile);
+            content = await chatbot.sendPrompt(`Categorize the following content, return it as follow: $CATEGORY$ (without the $) \n\'${filecontent.message}\'`)
+            break;
+        case "listDirectory":
+            const filepath_listdirectory = args.rootpath;
+            content = await mcp.listDirectory(filepath_listdirectory);
+            break;
+        case "readMultipleFiles":
+            const filepaths = args.filepaths;
+            content = await mcp.readMultipleFiles(filepaths);
+            break;
+        case "summarizeFile":
+            const filepath = args.filepath;
+            const fileContentResult = await mcp.readFile(filepath);
+            if (fileContentResult.isError) return res.json({ reply: fileContentResult.message });
+            content = await chatbot.sendPrompt(`Summarize the following document:\n\n${fileContentResult.message}`);
+            break;
+        default:
+            return res.json({ reply: "Model supplied unknown tool" });
+    }
+    chatbot.addToolResponseToBuffer(content.message, functionName);
+    chatbot.addAssistantMessageToBuffer(content.message);
+    await chatbot.saveBuffer();
+    return res.json({ reply: content.message });
+}
+);
 
+/* For displaying tool list on the right side */
 app.get('/api/tools', (req, res) => {
     res.json({ tools: chatbot.getToolsList() });
 });
