@@ -107,6 +107,55 @@ async function searchFiles(rootpath, pattern, excludePatterns) {
     return { isError: isError, message: response.content[0].text };
 }
 
+async function readMultipleFiles(filepaths) {
+    if (typeof filepaths === "string") {
+        try {
+            filepaths = JSON.parse(filepaths);
+        } catch (e) {
+            return { isError: true, message: "Invalid format for file list" };
+        }
+    }
+
+    if (!Array.isArray(filepaths)) {
+        return { isError: true, message: "Expected a list of file paths" };
+    }
+
+    // Use searchFiles to resolve real paths
+    const resolvedPaths = [];
+
+    for (const file of filepaths) {
+        const searchResult = await searchFiles("/", path.basename(file), []);
+        const found = searchResult.message
+            .split("\n")
+            .find(p => p.toLowerCase().endsWith(path.basename(file).toLowerCase()));
+        if (found) {
+            resolvedPaths.push(found);
+        } else {
+            resolvedPaths.push(path.join(resource_dir_path, file)); // fallback, may error
+        }
+    }
+
+    const response = await client.callTool({
+        name: "read_multiple_files",
+        arguments: { paths: resolvedPaths }
+    });
+
+    const isError = "isError" in response;
+    return { isError, message: response.content[0].text };
+}
+
+async function getFileInfo(filepath) {
+    const response = await client.callTool({
+        name: "get_file_info",
+        arguments: {
+            path: path.join(resource_dir_path, filepath)
+        }
+    });
+
+    const isError = "isError" in response;
+    return { isError, message: response.content[0].text };
+}
+
 (async () => {
     // const response = await client.listTools()
     // const tools = response.tools;
@@ -124,7 +173,8 @@ async function searchFiles(rootpath, pattern, excludePatterns) {
 
 module.exports =
 {
-    readFile,
+    readFile, readMultipleFiles,
     listDirectory, searchFiles,
     connectClient, closeClient,
+    getFileInfo,
 }

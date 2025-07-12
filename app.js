@@ -96,8 +96,18 @@ app.post('/api/chat-with-tools', async (req, res) => {
                 content = await chatbot.sendPrompt(`Categorize the following content, return it as follow: $CATEGORY$ (without the $) \n\'${filecontent.message}\'`)
                 break;
             case "listDirectory":
-                const rootpath = args.rootpath;
-                content = await mcp.listDirectory(rootpath);
+                const filepath_listdirectory = args.rootpath;
+                content = await mcp.listDirectory(filepath_listdirectory);
+                break;
+            case "readMultipleFiles":
+                const filepaths = args.filepaths;
+                content = await mcp.readMultipleFiles(filepaths);
+                break;
+            case "summarizeFile":
+                const filepath = args.filepath;
+                const fileContentResult = await mcp.readFile(filepath);
+                if (fileContentResult.isError) return res.json({ reply: fileContentResult.message });
+                content = await chatbot.sendPrompt(`Summarize the following document:\n\n${fileContentResult.message}`);
                 break;
             default:
                 return res.json({ reply: "Model supplied unknown tool" });

@@ -101,6 +101,38 @@ const tools_list = [
             }
         }
     },
+    {
+        type: "function",
+        function: {
+            name: "readMultipleFiles",
+            description: "Read the contents of multiple files from disk",
+            parameters: {
+                type: "object",
+                properties: {
+                    filepaths: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "An array of file paths to read",
+                    }
+                },
+                required: ["filepaths"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "summarizeFile",
+            description: "Read and summarize the content of a document file (e.g., .docx, .pdf)",
+            parameters: {
+                type: "object",
+                properties: {
+                    filepath: { type: "string", description: "The relative path to the file to summarize" },
+                },
+                required: ["filepath"]
+            }
+        }
+    },
 ];
 
 // ------------------------ TOOL HANDLERS ------------------------
