@@ -82,6 +82,8 @@ app.post('/api/chat-with-tools', async (req, res) => {
     const functionName = tool.function.name;
     const args = tool.function.arguments;
 
+    console.log(tools);
+
     let content = "";
     switch (functionName) {
         case "readFile":
@@ -94,20 +96,35 @@ app.post('/api/chat-with-tools', async (req, res) => {
             content = await chatbot.sendPrompt(`Categorize the following content, return it as follow: $CATEGORY$ (without the $) \n\'${filecontent.message}\'`)
             break;
         case "listDirectory":
-            const rootpath = args.rootpath;
-            content = await mcp.listDirectory(rootpath);
+            const filepath_listdirectory = args.rootpath;
+            content = await mcp.listDirectory(filepath_listdirectory);
+            break;
+        case "readMultipleFiles":
+            const filepaths = args.filepaths;
+            content = await mcp.readMultipleFiles(filepaths);
+            break;
+        case "summarizeFile":
+            const filepath = args.filepath;
+            const fileContentResult = await mcp.readFile(filepath);
+            if (fileContentResult.isError) return res.json({ reply: fileContentResult.message });
+            content = await chatbot.sendPrompt(`Summarize the following document:\n\n${fileContentResult.message}`);
+            break;
+        case "searchFiles":
+            const { rootpath, pattern, excludePatterns = [] } = args;
+            content = await mcp.searchFiles(rootpath, pattern, excludePatterns);
             break;
         default:
+            chatbot.addAssistantMessageToBuffer("Model supplied unknown tool");
             return res.json({ reply: "Model supplied unknown tool" });
     }
-
-    /* */
     chatbot.addToolResponseToBuffer(content.message, functionName);
     chatbot.addAssistantMessageToBuffer(content.message);
     await chatbot.saveBuffer();
 
+    /* */
     return res.json({ reply: content.message });
-});
+}
+);
 
 /* For displaying tool list on the right side */
 app.get('/api/tools', (req, res) => {

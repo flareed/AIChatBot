@@ -66,24 +66,96 @@ const tools_list = [
             }
         }
     },
+    // {
+    //     type: "function",
+    //     function: {
+    //         name: "categorizeFiles",
+    //         description: "Categorize a list of files on the hard drive",
+    //         parameters: {
+    //             type: "object",
+    //             properties: {
+    //                 filepaths:
+    //                 {
+    //                     type: "array",
+    //                     "items": {
+    //                         "type": "string"
+    //                     },
+    //                     description: "An array of filepaths, each element is a filepath"
+    //                 },
+    //             },
+    //             required: ["filepaths"]
+    //         }
+    //     }
+    // },
     {
         type: "function",
         function: {
-            name: "categorizeFiles",
-            description: "Categorize a list of files on the hard drive",
+            name: "listDirectory",
+            description: "List the files/directories from the rootpath (ex: \"C:/\" what folders & files inside it)",
             parameters: {
                 type: "object",
                 properties: {
-                    filepaths:
-                    {
+                    rootpath: { type: "string", description: "The rootpath from which we list the content (default is \"/\"" },
+                },
+                required: ["rootpath"]
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "readMultipleFiles",
+            description: "Read the contents of multiple files from disk",
+            parameters: {
+                type: "object",
+                properties: {
+                    filepaths: {
                         type: "array",
-                        "items": {
-                            "type": "string"
-                        },
-                        description: "An array of filepaths, each element is a filepath"
-                    },
+                        items: { type: "string" },
+                        description: "An array of file paths to read",
+                    }
                 },
                 required: ["filepaths"]
+            }
+        }
+    },
+    // {
+    //     type: "function",
+    //     function: {
+    //         name: "summarizeFile",
+    //         description: "Read and summarize the content of a document file (e.g., .docx, .pdf)",
+    //         parameters: {
+    //             type: "object",
+    //             properties: {
+    //                 filepath: { type: "string", description: "The relative path to the file to summarize" },
+    //             },
+    //             required: ["filepath"]
+    //         }
+    //     }
+    // },
+    {
+        type: "function",
+        function: {
+            name: "searchFiles",
+            description: "Search for files by name or keywords within the resource directory",
+            parameters: {
+                type: "object",
+                properties: {
+                    rootpath: {
+                        type: "string",
+                        description: "The root folder to start searching from (\"/\" by default)"
+                    },
+                    pattern: {
+                        type: "string",
+                        description: "Keywords or part of the file name to search"
+                    },
+                    excludePatterns: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "List of patterns to exclude (optional)"
+                    }
+                },
+                required: ["rootpath", "pattern"]
             }
         }
     },
