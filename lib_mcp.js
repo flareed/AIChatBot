@@ -140,7 +140,13 @@ async function readMultipleFiles(filepaths) {
         arguments: { paths: resolvedPaths }
     });
 
-    const isError = "isError" in response;
+    let isError = false;
+    if ("isError" in response) {
+        isError = true;
+        // console.log(`Error!!!`)
+        // console.log(`Info: ${response.content[0].text}`)
+    }
+
     return { isError, message: response.content[0].text };
 }
 
@@ -152,7 +158,13 @@ async function getFileInfo(filepath) {
         }
     });
 
-    const isError = "isError" in response;
+    let isError = false;
+    if ("isError" in response) {
+        isError = true;
+        // console.log(`Error!!!`)
+        // console.log(`Info: ${response.content[0].text}`)
+    }
+    
     return { isError, message: response.content[0].text };
 }
 
