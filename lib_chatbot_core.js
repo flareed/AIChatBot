@@ -66,27 +66,27 @@ const tools_list = [
             }
         }
     },
-    {
-        type: "function",
-        function: {
-            name: "categorizeFiles",
-            description: "Categorize a list of files on the hard drive",
-            parameters: {
-                type: "object",
-                properties: {
-                    filepaths:
-                    {
-                        type: "array",
-                        "items": {
-                            "type": "string"
-                        },
-                        description: "An array of filepaths, each element is a filepath"
-                    },
-                },
-                required: ["filepaths"]
-            }
-        }
-    },
+    // {
+    //     type: "function",
+    //     function: {
+    //         name: "categorizeFiles",
+    //         description: "Categorize a list of files on the hard drive",
+    //         parameters: {
+    //             type: "object",
+    //             properties: {
+    //                 filepaths:
+    //                 {
+    //                     type: "array",
+    //                     "items": {
+    //                         "type": "string"
+    //                     },
+    //                     description: "An array of filepaths, each element is a filepath"
+    //                 },
+    //             },
+    //             required: ["filepaths"]
+    //         }
+    //     }
+    // },
     {
         type: "function",
         function: {
@@ -119,20 +119,20 @@ const tools_list = [
             }
         }
     },
-    {
-        type: "function",
-        function: {
-            name: "summarizeFile",
-            description: "Read and summarize the content of a document file (e.g., .docx, .pdf)",
-            parameters: {
-                type: "object",
-                properties: {
-                    filepath: { type: "string", description: "The relative path to the file to summarize" },
-                },
-                required: ["filepath"]
-            }
-        }
-    },
+    // {
+    //     type: "function",
+    //     function: {
+    //         name: "summarizeFile",
+    //         description: "Read and summarize the content of a document file (e.g., .docx, .pdf)",
+    //         parameters: {
+    //             type: "object",
+    //             properties: {
+    //                 filepath: { type: "string", description: "The relative path to the file to summarize" },
+    //             },
+    //             required: ["filepath"]
+    //         }
+    //     }
+    // },
     {
         type: "function",
         function: {
@@ -143,7 +143,7 @@ const tools_list = [
                 properties: {
                     rootpath: {
                         type: "string",
-                        description: "The root folder to start searching from (e.g., / or /Fake Files)"
+                        description: "The root folder to start searching from (\"/\" by default)"
                     },
                     pattern: {
                         type: "string",

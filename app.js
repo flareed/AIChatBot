@@ -82,6 +82,8 @@ app.post('/api/chat-with-tools', async (req, res) => {
     const functionName = tool.function.name;
     const args = tool.function.arguments;
 
+    console.log(tools);
+
     let content = "";
     switch (functionName) {
         case "readFile":
@@ -112,11 +114,14 @@ app.post('/api/chat-with-tools', async (req, res) => {
             content = await mcp.searchFiles(rootpath, pattern, excludePatterns);
             break;
         default:
+            chatbot.addAssistantMessageToBuffer("Model supplied unknown tool");
             return res.json({ reply: "Model supplied unknown tool" });
     }
     chatbot.addToolResponseToBuffer(content.message, functionName);
     chatbot.addAssistantMessageToBuffer(content.message);
     await chatbot.saveBuffer();
+
+    /* */
     return res.json({ reply: content.message });
 }
 );
